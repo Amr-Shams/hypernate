@@ -7,6 +7,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import hu.bme.mit.ftsrg.hypernate.annotations.AttributeInfo;
 import hu.bme.mit.ftsrg.hypernate.annotations.PrimaryKey;
 import hu.bme.mit.ftsrg.hypernate.registry.EntityExistsException;
@@ -14,6 +15,7 @@ import hu.bme.mit.ftsrg.hypernate.registry.EntityNotFoundException;
 import hu.bme.mit.ftsrg.hypernate.registry.MissingPrimaryKeysException;
 import hu.bme.mit.ftsrg.hypernate.registry.Registry;
 import hu.bme.mit.ftsrg.hypernate.registry.SerializationException;
+import hu.bme.mit.ftsrg.hypernate.util.EntityTypes;
 import hu.bme.mit.ftsrg.hypernate.util.JSON;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -32,6 +34,7 @@ import org.junit.jupiter.api.DisplayNameGenerator.ReplaceUnderscores;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -45,10 +48,13 @@ class RegistryTest {
       new CompositeKey(entity.getClass().getName(), entity.foo, entity.bar.toString());
   private static final String ENTITY_COMPOSITE_KEY_STR = ENTITY_COMPOSITE_KEY.toString();
   private static final byte[] ENTITY_BUFFER;
+  private static final ObjectMapper objectMapper = new ObjectMapper();
 
   static {
     try {
-      ENTITY_BUFFER = JSON.serialize(entity).getBytes(StandardCharsets.UTF_8);
+      ENTITY_BUFFER =
+          JSON.serializeEntityDocument(EntityTypes.docType(TestEntity.class), entity)
+              .getBytes(StandardCharsets.UTF_8);
     } catch (SerializationException e) {
       throw new RuntimeException(e);
     }
@@ -102,6 +108,31 @@ class RegistryTest {
       registry.mustCreate(entity);
 
       then(stub).should().putState(eq(ENTITY_COMPOSITE_KEY_STR), any(byte[].class));
+      verifyNoMoreInteractions(stub);
+    }
+
+    @Test
+    void given_empty_ledger_then_persist_doc_type_with_entity_payload() throws Exception {
+      given(stub.createCompositeKey(anyString(), any(String[].class)))
+          .willReturn(ENTITY_COMPOSITE_KEY);
+      given(stub.getState(anyString())).willReturn(new byte[] {});
+
+      registry.mustCreate(entity);
+
+      final ArgumentCaptor<byte[]> payloadCaptor = ArgumentCaptor.forClass(byte[].class);
+      then(stub).should().putState(eq(ENTITY_COMPOSITE_KEY_STR), payloadCaptor.capture());
+
+      assertEquals(
+          objectMapper.readTree(
+              """
+              {
+                "docType": "%s",
+                "foo": "fooValue",
+                "bar": 110
+              }
+              """
+                  .formatted(EntityTypes.docType(TestEntity.class))),
+          objectMapper.readTree(new String(payloadCaptor.getValue(), StandardCharsets.UTF_8)));
       verifyNoMoreInteractions(stub);
     }
 

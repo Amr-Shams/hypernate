@@ -4,6 +4,9 @@ package hu.bme.mit.ftsrg.hypernate.registry;
 import com.jcabi.aspects.Loggable;
 import hu.bme.mit.ftsrg.hypernate.annotations.AttributeInfo;
 import hu.bme.mit.ftsrg.hypernate.annotations.PrimaryKey;
+import hu.bme.mit.ftsrg.hypernate.registry.query.RichQueryBuilder;
+import hu.bme.mit.ftsrg.hypernate.registry.query.RichQueryExecutor;
+import hu.bme.mit.ftsrg.hypernate.util.EntityTypes;
 import hu.bme.mit.ftsrg.hypernate.util.JSON;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -206,6 +209,21 @@ public class Registry {
         .collect(Collectors.toList());
   }
 
+  /**
+   * Start building a CouchDB rich query for an entity type.
+   *
+   * <p>The resulting builder validates fields against entity metadata, injects a persisted {@code
+   * docType} discriminator into selectors, and can execute the translated selector through the
+   * underlying Fabric stub.
+   *
+   * @param clazz the entity type to query
+   * @return a fluent rich-query builder
+   * @param <T> the entity type
+   */
+  public <T> RichQueryBuilder<T> richQuery(final Class<T> clazz) {
+    return new RichQueryBuilder<>(clazz, new RichQueryExecutor(stub));
+  }
+
   @Loggable(Loggable.DEBUG)
   private boolean keyExists(final String key) {
     final byte[] valueOnLedger = stub.getState(key);
@@ -246,7 +264,7 @@ public class Registry {
     }
 
     <T> String getType(final Class<T> clazz) {
-      return clazz.getName().toUpperCase();
+      return EntityTypes.keyType(clazz);
     }
 
     <T> int getPrimaryKeyCount(final Class<T> clazz) {
@@ -293,7 +311,7 @@ public class Registry {
     }
 
     <T> String toJson(final T entity) {
-      return JSON.serialize(entity);
+      return JSON.serializeEntityDocument(EntityTypes.docType(entity.getClass()), entity);
     }
 
     private <T> PrimaryKey getPrimaryKeyAnnot(final Class<T> clazz) {

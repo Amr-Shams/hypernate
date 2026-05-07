@@ -2,9 +2,11 @@
 package hu.bme.mit.ftsrg.hypernate.util;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.jcabi.aspects.Loggable;
 import hu.bme.mit.ftsrg.hypernate.registry.SerializationException;
 import java.io.IOException;
@@ -16,7 +18,10 @@ import lombok.experimental.UtilityClass;
 public final class JSON {
 
   private static final ObjectMapper mapper =
-      JsonMapper.builder().enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY).build();
+      JsonMapper.builder()
+          .enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
+          .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+          .build();
 
   /**
    * Serialize an object to a JSON string.
@@ -29,6 +34,24 @@ public final class JSON {
       return mapper.writeValueAsString(obj);
     } catch (JsonProcessingException e) {
       throw new SerializationException("Failed to serialize to JSON", e);
+    }
+  }
+
+  /**
+   * Serialize an entity document while injecting a persisted rich-query discriminator.
+   *
+   * @param docType the rich-query discriminator to store alongside the entity fields
+   * @param obj the entity to serialize
+   * @return JSON document containing both the entity fields and {@code docType}
+   */
+  public static String serializeEntityDocument(final String docType, final Object obj)
+      throws SerializationException {
+    try {
+      final ObjectNode node = mapper.valueToTree(obj);
+      node.put("docType", docType);
+      return mapper.writeValueAsString(node);
+    } catch (IllegalArgumentException | JsonProcessingException e) {
+      throw new SerializationException("Failed to serialize entity document to JSON", e);
     }
   }
 
