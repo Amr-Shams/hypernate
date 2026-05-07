@@ -102,3 +102,15 @@ This allows call interception for logging, caching, and other cross-cutting beha
 keeping business code focused.
 
 > Hypernate context and middleware instances are specific to individual transaction executions.
+
+## Rich Query Builder Preview
+
+Hypernate now contains the first end-to-end rich-query slice: a lazy
+`Registry.richQuery(...)` entrypoint with metadata-backed field validation,
+selector translation for `where(...).is(...)`, persisted `docType` support, and
+typed execution through Fabric rich-query APIs.
+
+For the current design notes, constraints, and future scope see:
+
+- [Rich Query Builder Challenge Artifacts](rich-query-builder-challenge-artifacts.md)
+- [Rich Query Builder Proposal](rich-query-builder-proposal.md)

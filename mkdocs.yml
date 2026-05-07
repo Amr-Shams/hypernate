@@ -38,6 +38,8 @@ nav:
       - Quickstart: getting-started/quickstart.md
   - Concepts:
       - Overview: concepts/index.md
+      - Rich Query Builder Challenge Artifacts: concepts/rich-query-builder-challenge-artifacts.md
+      - Rich Query Builder Proposal: concepts/rich-query-builder-proposal.md
       - Registry: concepts/registry.md
       - Middleware: concepts/middleware.md
       - Annotations: concepts/annotations.md
