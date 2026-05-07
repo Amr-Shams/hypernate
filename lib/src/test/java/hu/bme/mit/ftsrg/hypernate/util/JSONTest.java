@@ -33,6 +33,19 @@ public class JSONTest {
     assertThat(json).isEqualToIgnoringWhitespace("{\"number\": 100, \"string\": \"abc\"}");
   }
 
+  @Test
+  public void given_json_with_unknown_doc_type_when_deserialize_then_ignore_extra_field()
+      throws SerializationException {
+    /* --- given --- */
+    String json = "{\"docType\":\"TEST\",\"string\":\"abc\"}";
+
+    /* --- when --- */
+    Foo obj = JSON.deserialize(json, Foo.class);
+
+    /* --- then --- */
+    assertThat(obj).isEqualTo(new Foo("abc"));
+  }
+
   private record Foo(String string) {}
 
   private record Bar(String string, int number) {}
